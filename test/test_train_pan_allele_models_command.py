@@ -9,7 +9,6 @@ import os
 import shutil
 import tempfile
 import subprocess
-
 import pandas
 import pytest
 
@@ -17,7 +16,7 @@ from numpy.testing import assert_equal, assert_array_less
 
 from mhcflurry import Class1AffinityPredictor
 from mhcflurry.downloads import get_path
-
+from mhcflurry import select_pan_allele_models_command, train_pan_allele_models_command
 from mhcflurry.testing_utils import cleanup, startup
 
 pytest.fixture(autouse=True, scope="module")
@@ -151,8 +150,8 @@ def run_and_check(n_jobs=0, delete=True, additional_args=[]):
     selected_data_df.to_csv(
         os.path.join(models_dir, "_train_data.csv"), index=False)
 
-    args = [
-        "mhcflurry-class1-train-pan-allele-models",
+    train_parser = train_pan_allele_models_command.create_parser()
+    args = train_parser.parse_args([
         "--data", os.path.join(models_dir, "_train_data.csv"),
         "--allele-sequences", get_path("allele_sequences", "allele_sequences.csv"),
         "--pretrain-data", pretrain_data_filename,
@@ -160,24 +159,22 @@ def run_and_check(n_jobs=0, delete=True, additional_args=[]):
         "--out-models-dir", models_dir,
         "--num-jobs", str(n_jobs),
         "--num-folds", "2",
-        "--verbosity", "1",
-    ] + additional_args
-    print("Running with args: %s" % args)
-    subprocess.check_call(args)
+        "--verbosity", "1"])
+    train_pan_allele_models_command.main(args)
 
     # Run model selection
     models_dir_selected = tempfile.mkdtemp(
         prefix="mhcflurry-test-models-selected")
-    args = [
-        "mhcflurry-class1-select-pan-allele-models",
+    select_parser = select_pan_allele_models_command.create_parser()
+    args = select_parser.parse_args([
         "--data", os.path.join(models_dir, "train_data.csv.bz2"),
         "--models-dir", models_dir,
         "--out-models-dir", models_dir_selected,
         "--max-models", "1",
         "--num-jobs", str(n_jobs),
-    ] + additional_args
+    ] + additional_args)
     print("Running with args: %s" % args)
-    subprocess.check_call(args)
+    select_pan_allele_models_command.main(args)
 
     result = Class1AffinityPredictor.load(
         models_dir_selected, optimization_level=0)
@@ -193,13 +190,13 @@ def run_and_check(n_jobs=0, delete=True, additional_args=[]):
         shutil.rmtree(models_dir_selected)
 
 
+def test_run_serial():
+    run_and_check(n_jobs=0)
+
+
 def test_run_parallel():
     run_and_check(n_jobs=1)
     run_and_check(n_jobs=2)
-
-
-def test_run_serial():
-    run_and_check(n_jobs=0)
 
 
 def test_run_cluster_parallelism():
@@ -211,4 +208,6 @@ def test_run_cluster_parallelism():
 
 if __name__ == "__main__":
     # run_and_check(n_jobs=0, delete=False)
-    test_run_cluster_parallelism()
+    # test_run_serial()
+    test_run_parallel()
+    # test_run_cluster_parallelism()

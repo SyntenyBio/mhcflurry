@@ -41,52 +41,54 @@ from .regression_target import from_ic50
 # via shared memory.
 GLOBAL_DATA = {}
 
+def create_parser():
+    parser = argparse.ArgumentParser(usage=__doc__)
 
-parser = argparse.ArgumentParser(usage=__doc__)
+    parser.add_argument(
+        "--data",
+        metavar="FILE.csv",
+        required=False,
+        help=(
+            "Model selection data CSV. Expected columns: "
+            "allele, peptide, measurement_value"))
+    parser.add_argument(
+        "--models-dir",
+        metavar="DIR",
+        required=True,
+        help="Directory to read models")
+    parser.add_argument(
+        "--out-models-dir",
+        metavar="DIR",
+        required=True,
+        help="Directory to write selected models")
+    parser.add_argument(
+        "--min-models-per-fold",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Min number of models to select per fold")
+    parser.add_argument(
+        "--max-models-per-fold",
+        type=int,
+        default=1000,
+        metavar="N",
+        help="Max number of models to select per fold")
+    parser.add_argument(
+        "--mass-spec-regex",
+        metavar="REGEX",
+        default="mass[- ]spec",
+        help="Regular expression for mass-spec data. Runs on measurement_source col."
+        "Default: %(default)s.")
+    parser.add_argument(
+        "--verbosity",
+        type=int,
+        help="Keras verbosity. Default: %(default)s",
+        default=0)
 
-parser.add_argument(
-    "--data",
-    metavar="FILE.csv",
-    required=False,
-    help=(
-        "Model selection data CSV. Expected columns: "
-        "allele, peptide, measurement_value"))
-parser.add_argument(
-    "--models-dir",
-    metavar="DIR",
-    required=True,
-    help="Directory to read models")
-parser.add_argument(
-    "--out-models-dir",
-    metavar="DIR",
-    required=True,
-    help="Directory to write selected models")
-parser.add_argument(
-    "--min-models-per-fold",
-    type=int,
-    default=2,
-    metavar="N",
-    help="Min number of models to select per fold")
-parser.add_argument(
-    "--max-models-per-fold",
-    type=int,
-    default=1000,
-    metavar="N",
-    help="Max number of models to select per fold")
-parser.add_argument(
-    "--mass-spec-regex",
-    metavar="REGEX",
-    default="mass[- ]spec",
-    help="Regular expression for mass-spec data. Runs on measurement_source col."
-    "Default: %(default)s.")
-parser.add_argument(
-    "--verbosity",
-    type=int,
-    help="Keras verbosity. Default: %(default)s",
-    default=0)
+    add_local_parallelism_args(parser)
+    add_cluster_parallelism_args(parser)
 
-add_local_parallelism_args(parser)
-add_cluster_parallelism_args(parser)
+    return parser
 
 
 def mse(
@@ -137,7 +139,12 @@ def run(argv=sys.argv[1:]):
     print("To show stack trace, run:\nkill -s USR1 %d" % os.getpid())
     signal.signal(signal.SIGUSR1, lambda sig, frame: traceback.print_stack())
 
+    parser = create_parser()
     args = parser.parse_args(argv)
+
+    main(args)
+
+def main(args):
 
     args.out_models_dir = os.path.abspath(args.out_models_dir)
 

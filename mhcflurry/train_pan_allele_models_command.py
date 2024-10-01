@@ -48,88 +48,91 @@ GLOBAL_DATA = {}
 # keras.backend. So we must make sure not to use tensorflow in the main process
 # if we are running in parallel.
 
-parser = argparse.ArgumentParser(usage=__doc__)
+def create_parser():
+    parser = argparse.ArgumentParser(usage=__doc__)
 
-parser.add_argument(
-    "--data",
-    metavar="FILE.csv",
-    help=(
-        "Training data CSV. Expected columns: "
-        "allele, peptide, measurement_value"))
-parser.add_argument(
-    "--pretrain-data",
-    metavar="FILE.csv",
-    help=(
-        "Pre-training data CSV. Expected columns: "
-        "allele, peptide, measurement_value"))
-parser.add_argument(
-    "--out-models-dir",
-    metavar="DIR",
-    required=True,
-    help="Directory to write models and manifest")
-parser.add_argument(
-    "--hyperparameters",
-    metavar="FILE.json",
-    help="JSON or YAML of hyperparameters")
-parser.add_argument(
-    "--held-out-measurements-per-allele-fraction-and-max",
-    type=float,
-    metavar="X",
-    nargs=2,
-    default=[0.25, 100],
-    help="Fraction of measurements per allele to hold out, and maximum number")
-parser.add_argument(
-    "--ignore-inequalities",
-    action="store_true",
-    default=False,
-    help="Do not use affinity value inequalities even when present in data")
-parser.add_argument(
-    "--num-folds",
-    type=int,
-    default=4,
-    metavar="N",
-    help="Number of training folds.")
-parser.add_argument(
-    "--num-replicates",
-    type=int,
-    metavar="N",
-    default=1,
-    help="Number of replicates per (architecture, fold) pair to train.")
-parser.add_argument(
-    "--max-epochs",
-    type=int,
-    metavar="N",
-    help="Max training epochs. If specified here it overrides any 'max_epochs' "
-    "specified in the hyperparameters.")
-parser.add_argument(
-    "--allele-sequences",
-    metavar="FILE.csv",
-    help="Allele sequences file.")
-parser.add_argument(
-    "--verbosity",
-    type=int,
-    help="Keras verbosity. Default: %(default)s",
-    default=0)
-parser.add_argument(
-    "--debug",
-    action="store_true",
-    default=False,
-    help="Launch python debugger on error")
-parser.add_argument(
-    "--continue-incomplete",
-    action="store_true",
-    default=False,
-    help="Continue training models from an incomplete training run. If this is "
-    "specified then the only required argument is --out-models-dir")
-parser.add_argument(
-    "--only-initialize",
-    action="store_true",
-    default=False,
-    help="Do not actually train models. The initialized run can be continued "
-    "later with --continue-incomplete.")
+    parser.add_argument(
+        "--data",
+        metavar="FILE.csv",
+        help=(
+            "Training data CSV. Expected columns: "
+            "allele, peptide, measurement_value"))
+    parser.add_argument(
+        "--pretrain-data",
+        metavar="FILE.csv",
+        help=(
+            "Pre-training data CSV. Expected columns: "
+            "allele, peptide, measurement_value"))
+    parser.add_argument(
+        "--out-models-dir",
+        metavar="DIR",
+        required=True,
+        help="Directory to write models and manifest")
+    parser.add_argument(
+        "--hyperparameters",
+        metavar="FILE.json",
+        help="JSON or YAML of hyperparameters")
+    parser.add_argument(
+        "--held-out-measurements-per-allele-fraction-and-max",
+        type=float,
+        metavar="X",
+        nargs=2,
+        default=[0.25, 100],
+        help="Fraction of measurements per allele to hold out, and maximum number")
+    parser.add_argument(
+        "--ignore-inequalities",
+        action="store_true",
+        default=False,
+        help="Do not use affinity value inequalities even when present in data")
+    parser.add_argument(
+        "--num-folds",
+        type=int,
+        default=4,
+        metavar="N",
+        help="Number of training folds.")
+    parser.add_argument(
+        "--num-replicates",
+        type=int,
+        metavar="N",
+        default=1,
+        help="Number of replicates per (architecture, fold) pair to train.")
+    parser.add_argument(
+        "--max-epochs",
+        type=int,
+        metavar="N",
+        help="Max training epochs. If specified here it overrides any 'max_epochs' "
+        "specified in the hyperparameters.")
+    parser.add_argument(
+        "--allele-sequences",
+        metavar="FILE.csv",
+        help="Allele sequences file.")
+    parser.add_argument(
+        "--verbosity",
+        type=int,
+        help="Keras verbosity. Default: %(default)s",
+        default=0)
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Launch python debugger on error")
+    parser.add_argument(
+        "--continue-incomplete",
+        action="store_true",
+        default=False,
+        help="Continue training models from an incomplete training run. If this is "
+        "specified then the only required argument is --out-models-dir")
+    parser.add_argument(
+        "--only-initialize",
+        action="store_true",
+        default=False,
+        help="Do not actually train models. The initialized run can be continued "
+        "later with --continue-incomplete.")
 
-add_local_parallelism_args(parser)
-add_cluster_parallelism_args(parser)
+    add_local_parallelism_args(parser)
+    add_cluster_parallelism_args(parser)
+
+    return parser
 
 
 def assign_folds(df, num_folds, held_out_fraction, held_out_max):
@@ -266,6 +269,7 @@ def run(argv=sys.argv[1:]):
     print("To show stack trace, run:\nkill -s USR1 %d" % os.getpid())
     signal.signal(signal.SIGUSR1, lambda sig, frame: traceback.print_stack())
 
+    parser = create_parser()
     args = parser.parse_args(argv)
 
     if args.debug:
@@ -303,7 +307,7 @@ def initialize_training(args):
     ]
     for arg in required_arguments:
         if getattr(args, arg) is None:
-            parser.error("Missing required arg: %s" % arg)
+            raise Exception("Missing required arg: %s" % arg)
 
     print("Initializing training.")
     hyperparameters_lst = yaml.safe_load(open(args.hyperparameters))
