@@ -16,7 +16,7 @@ from collections import OrderedDict
 from appdirs import user_data_dir
 import sys
 
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 10):
     import importlib.resources as resources
 else:
     import importlib_resources as resources
