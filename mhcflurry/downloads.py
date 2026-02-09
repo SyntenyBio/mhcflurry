@@ -14,7 +14,7 @@ from os import environ
 from pipes import quote
 from collections import OrderedDict
 from appdirs import user_data_dir
-from pkg_resources import resource_string
+from importlib import resources
 
 import pandas
 
@@ -56,7 +56,7 @@ def get_downloads_metadata():
     """
     global _METADATA
     if _METADATA is None:
-        _METADATA = yaml.safe_load(resource_string(__name__, "downloads.yml"))
+        _METADATA = yaml.safe_load(resources.files(__name__).joinpath("downloads.yml").read_text())
     return _METADATA
 
 
