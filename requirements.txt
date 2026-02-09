@@ -8,3 +8,4 @@ scikit-learn
 mhcgnomes
 pyyaml
 tqdm
+importlib_resources
