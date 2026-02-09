@@ -14,7 +14,12 @@ from os import environ
 from pipes import quote
 from collections import OrderedDict
 from appdirs import user_data_dir
-from importlib import resources
+import sys
+
+if sys.version_info >= (3, 12):
+    import importlib.resources as resources
+else:
+    import importlib_resources as resources
 
 import pandas
 
